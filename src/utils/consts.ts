@@ -8,6 +8,7 @@ export const routes = {
   dashboardExpenses: '/dashboard/expenses',
   dashboardDebts: '/dashboard/debts',
   dashboardAnalytics: '/dashboard/analytics',
+  dashboardUsers: '/dashboard/users',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
 } as const;

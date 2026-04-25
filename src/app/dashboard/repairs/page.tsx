@@ -9,6 +9,7 @@ import { RepairCreateForm } from '@/components/dashboard/repair-create-form';
 import { RepairRowActions } from '@/components/dashboard/repair-row-actions';
 import { RepairStatusButton } from '@/components/dashboard/repair-status-button';
 import { authOptions } from '@/lib/auth';
+import { canAccessDashboardPage } from '@/lib/dashboard-permissions';
 import { prisma } from '@/lib/prisma';
 import { routes } from '@/utils/consts';
 
@@ -36,6 +37,9 @@ export default async function RepairsPage({
   const session = await getServerSession(authOptions);
   if (!session) {
     redirect(routes.home);
+  }
+  if (!canAccessDashboardPage(session.user.role, 'repairs')) {
+    redirect(routes.dashboard);
   }
 
   const sp = await searchParams;
@@ -78,11 +82,11 @@ export default async function RepairsPage({
   ]);
 
   return (
-    <main className="min-h-screen bg-neutral-50 px-4 py-6 sm:py-8 lg:pl-76">
+    <main className="min-h-screen bg-neutral-50 px-3 py-3 sm:px-4 sm:py-8 lg:pl-76">
       <DashboardSidebar session={session} active="repairs" />
 
       <div className="mx-auto max-w-6xl">
-        <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-8">
           <header className="border-b border-neutral-200 pb-4">
             <h2 className="text-2xl font-semibold text-neutral-900">
               Վերանորոգման շահույթ
@@ -168,7 +172,7 @@ export default async function RepairsPage({
               </select>
             </label>
 
-            <div className="flex items-end gap-2 lg:col-span-2">
+            <div className="grid gap-2 sm:flex sm:items-end lg:col-span-2">
               <button
                 type="submit"
                 className="rounded-lg bg-green px-4 py-2.5 text-sm font-medium text-cream transition hover:opacity-95"
@@ -177,15 +181,15 @@ export default async function RepairsPage({
               </button>
               <Link
                 href={routes.dashboardRepairs}
-                className="rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm text-neutral-800 hover:bg-neutral-100"
+                className="rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-center text-sm text-neutral-800 hover:bg-neutral-100"
               >
                 Մաքրել
               </Link>
             </div>
           </form>
 
-          <div className="rounded-xl border border-neutral-200 overflow-hidden">
-            <div className="grid grid-cols-12 border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-500">
+          <div className="overflow-hidden rounded-xl border border-neutral-200">
+            <div className="hidden grid-cols-12 border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-500 md:grid">
               <p className="col-span-1">Նկար</p>
               <p className="col-span-2">Տեխնիկա</p>
               <p className="col-span-2">Հաճախորդ</p>
@@ -204,10 +208,10 @@ export default async function RepairsPage({
                 repairs.map((item) => (
                   <div
                     key={item.id}
-                    className="space-y-2 px-4 py-3 text-sm text-neutral-800"
+                    className="space-y-3 px-4 py-4 text-sm text-neutral-800 hover:bg-neutral-50 md:py-3"
                   >
-                    <div className="grid grid-cols-12 items-start gap-2">
-                      <div className="col-span-1">
+                    <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-12 md:gap-2">
+                      <div className="flex items-center gap-3 md:col-span-1">
                         {item.imageUrl ? (
                           <Image
                             src={item.imageUrl}
@@ -221,19 +225,30 @@ export default async function RepairsPage({
                             <span className="fa-regular fa-image" aria-hidden />
                           </div>
                         )}
+                        <div className="md:hidden">
+                          <p className="text-xs text-neutral-500">Տեխնիկա</p>
+                          <p className="font-semibold text-neutral-900">{item.deviceName}</p>
+                        </div>
                       </div>
-                      <p className="col-span-2 font-medium">
+                      <p className="hidden font-medium md:col-span-2 md:block">
                         {item.deviceName}
                       </p>
-                      <div className="col-span-2">
+                      <div className="rounded-lg bg-neutral-50 px-3 py-2 md:col-span-2 md:bg-transparent md:px-0 md:py-0">
+                        <p className="mb-1 text-xs text-neutral-500 md:hidden">Հաճախորդ</p>
                         <p>{item.customerName}</p>
                         <p className="text-xs text-neutral-500">
                           {item.customerPhone || '—'}
                         </p>
                       </div>
-                      <p className="col-span-1">{item.expenses.toString()}</p>
-                      <p className="col-span-1">{item.netProfit.toString()}</p>
-                      <div className="col-span-3 space-y-1">
+                      <p className="flex justify-between rounded-lg bg-neutral-50 px-3 py-2 md:col-span-1 md:block md:bg-transparent md:px-0 md:py-0">
+                        <span className="text-xs text-neutral-500 md:hidden">Ծախս</span>
+                        <span>{item.expenses.toString()}</span>
+                      </p>
+                      <p className="flex justify-between rounded-lg bg-neutral-50 px-3 py-2 md:col-span-1 md:block md:bg-transparent md:px-0 md:py-0">
+                        <span className="text-xs text-neutral-500 md:hidden">Շահույթ</span>
+                        <span>{item.netProfit.toString()}</span>
+                      </p>
+                      <div className="space-y-2 rounded-lg bg-neutral-50 px-3 py-2 md:col-span-3 md:bg-transparent md:px-0 md:py-0">
                         <p className="text-xs text-neutral-500">
                           {statusLabel[item.status]}
                         </p>
@@ -255,9 +270,11 @@ export default async function RepairsPage({
                         }}
                       />
                     </div>
-                    <p className="text-xs text-neutral-600">
-                      {item.description}
-                    </p>
+                    {item.description ? (
+                      <p className="rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-600 md:bg-transparent md:px-0 md:py-0">
+                        {item.description}
+                      </p>
+                    ) : null}
                   </div>
                 ))
               )}

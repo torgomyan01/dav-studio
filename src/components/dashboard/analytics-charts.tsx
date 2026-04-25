@@ -166,12 +166,12 @@ export function AnalyticsCharts({
       </section>
 
       <section className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="grid gap-3 sm:flex sm:items-center sm:justify-between">
           <h3 className="text-sm font-semibold text-neutral-900">Ժամանակային կտրվածքի ընտրություն</h3>
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value as PeriodKey)}
-            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 outline-none ring-green transition focus:border-green focus:ring-2"
+            className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 outline-none ring-green transition focus:border-green focus:ring-2 sm:w-auto"
           >
             <option value="daily">Օրական</option>
             <option value="weekly">Շաբաթական</option>
@@ -340,9 +340,9 @@ function TrendChart({
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-neutral-200 p-4">
+    <div className="rounded-xl border border-neutral-200 p-3 sm:p-4">
       <h3 className="mb-3 text-sm font-semibold text-neutral-900">{title}</h3>
-      <div className="h-72">{children}</div>
+      <div className="h-64 sm:h-72">{children}</div>
     </div>
   );
 }

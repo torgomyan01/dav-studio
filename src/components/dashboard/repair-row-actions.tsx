@@ -103,8 +103,8 @@ export function RepairRowActions({
 
   return (
     <>
-      <div className="col-span-2 space-y-1">
-        <div className="flex flex-wrap justify-end gap-2">
+      <div className="col-span-full space-y-1 md:col-span-2">
+        <div className="flex flex-wrap gap-2 md:justify-end">
           <button
             type="button"
             onClick={() => setOpen(true)}
@@ -129,8 +129,8 @@ export function RepairRowActions({
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl sm:p-8">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 px-3 py-5">
+          <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-4 shadow-xl sm:p-8">
             <div className="mb-4 flex items-start justify-between gap-3 border-b border-neutral-200 pb-3">
               <div>
                 <h3 className="text-base font-semibold text-neutral-900">Փոփոխել վերանորոգման պատվերը</h3>

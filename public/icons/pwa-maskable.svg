@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Ohanyan Studio">
+  <rect width="512" height="512" fill="#1e4a2f"/>
+  <circle cx="256" cy="256" r="214" fill="#f7f1df" opacity="0.1"/>
+  <rect x="176" y="88" width="160" height="336" rx="36" fill="#f7f1df"/>
+  <rect x="194" y="126" width="124" height="236" rx="18" fill="#1e4a2f"/>
+  <circle cx="256" cy="390" r="16" fill="#1e4a2f"/>
+  <path d="M318 176l-82 92h58l-38 74 86-102h-58l34-64z" fill="#d7a940"/>
+</svg>

@@ -77,8 +77,8 @@ export function AccessoryRowActions({
 
   return (
     <>
-      <div className="col-span-3 space-y-1">
-        <div className="flex items-center justify-end gap-2">
+      <div className="col-span-full space-y-1 md:col-span-3">
+        <div className="flex items-center gap-2 md:justify-end">
           <button
             type="button"
             onClick={() => setOpen(true)}
@@ -103,8 +103,8 @@ export function AccessoryRowActions({
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="w-full max-w-xl rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl sm:p-8">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 px-3 py-5">
+          <div className="max-h-full w-full max-w-xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-4 shadow-xl sm:p-8">
             <div className="mb-4 flex items-start justify-between gap-3 border-b border-neutral-200 pb-3">
               <div>
                 <h3 className="text-base font-semibold text-neutral-900">Փոփոխել ակսեսուարը</h3>

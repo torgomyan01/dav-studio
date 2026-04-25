@@ -5,6 +5,7 @@ import { AccessorySaleForm } from '@/components/dashboard/accessory-sale-form';
 import { AccessorySaleRowActions } from '@/components/dashboard/accessory-sale-row-actions';
 import { DashboardSidebar } from '@/components/dashboard/dashboard-sidebar';
 import { authOptions } from '@/lib/auth';
+import { canAccessDashboardPage } from '@/lib/dashboard-permissions';
 import { prisma } from '@/lib/prisma';
 import { routes } from '@/utils/consts';
 
@@ -12,6 +13,9 @@ export default async function AccessorySalesPage() {
   const session = await getServerSession(authOptions);
   if (!session) {
     redirect(routes.home);
+  }
+  if (!canAccessDashboardPage(session.user.role, 'accessorySales')) {
+    redirect(routes.dashboard);
   }
 
   const [accessories, sales] = await Promise.all([
@@ -42,11 +46,11 @@ export default async function AccessorySalesPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-neutral-50 px-4 py-6 sm:py-8 lg:pl-76">
+    <main className="min-h-screen bg-neutral-50 px-3 py-3 sm:px-4 sm:py-8 lg:pl-76">
       <DashboardSidebar session={session} active="accessorySales" />
 
       <div className="mx-auto max-w-6xl">
-        <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-8">
           <header className="border-b border-neutral-200 pb-4">
             <h2 className="text-2xl font-semibold text-neutral-900">
               Ակսեսուարի վաճառք
@@ -58,8 +62,8 @@ export default async function AccessorySalesPage() {
 
           <AccessorySaleForm accessories={accessories} />
 
-          <div className="rounded-xl border border-neutral-200 overflow-hidden">
-            <div className="grid grid-cols-12 border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-500">
+          <div className="overflow-hidden rounded-xl border border-neutral-200">
+            <div className="hidden grid-cols-12 border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-500 md:grid">
               <p className="col-span-3">Ակսեսուար</p>
               <p className="col-span-1">Քանակ</p>
               <p className="col-span-2">Վաճառքի գին</p>
@@ -77,18 +81,24 @@ export default async function AccessorySalesPage() {
                 sales.map((item) => (
                   <div
                     key={item.id}
-                    className="grid grid-cols-12 px-4 py-3 text-sm text-neutral-800 hover:bg-neutral-50"
+                    className="grid grid-cols-1 gap-2 px-4 py-4 text-sm text-neutral-800 hover:bg-neutral-50 md:grid-cols-12 md:items-center md:gap-0 md:py-3"
                   >
-                    <p className="col-span-3">{item.accessory.name}</p>
-                    <p className="col-span-1">{item.quantity}</p>
-                    <p className="col-span-2">
-                      {item.unitSalePrice.toString()}
+                    <p className="font-semibold text-neutral-900 md:col-span-3 md:font-normal">{item.accessory.name}</p>
+                    <p className="flex justify-between rounded-lg bg-neutral-50 px-3 py-2 md:col-span-1 md:block md:bg-transparent md:px-0 md:py-0">
+                      <span className="text-xs text-neutral-500 md:hidden">Քանակ</span>
+                      <span>{item.quantity}</span>
                     </p>
-                    <p className="col-span-2">
-                      {item.totalSalePrice.toString()}
+                    <p className="flex justify-between rounded-lg bg-neutral-50 px-3 py-2 md:col-span-2 md:block md:bg-transparent md:px-0 md:py-0">
+                      <span className="text-xs text-neutral-500 md:hidden">Վաճառքի գին</span>
+                      <span>{item.unitSalePrice.toString()}</span>
                     </p>
-                    <p className="col-span-2 text-xs text-neutral-500">
-                      {item.createdAt.toLocaleDateString('hy-AM')}
+                    <p className="flex justify-between rounded-lg bg-neutral-50 px-3 py-2 md:col-span-2 md:block md:bg-transparent md:px-0 md:py-0">
+                      <span className="text-xs text-neutral-500 md:hidden">Ընդամենը</span>
+                      <span>{item.totalSalePrice.toString()}</span>
+                    </p>
+                    <p className="flex justify-between rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-500 md:col-span-2 md:block md:bg-transparent md:px-0 md:py-0">
+                      <span className="md:hidden">Ամսաթիվ</span>
+                      <span>{item.createdAt.toLocaleDateString('hy-AM')}</span>
                     </p>
                     <AccessorySaleRowActions
                       sale={{

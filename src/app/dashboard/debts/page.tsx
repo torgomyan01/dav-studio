@@ -5,6 +5,7 @@ import { DashboardSidebar } from '@/components/dashboard/dashboard-sidebar';
 import { DebtCreateForm } from '@/components/dashboard/debt-create-form';
 import { DebtPaymentForm } from '@/components/dashboard/debt-payment-form';
 import { authOptions } from '@/lib/auth';
+import { canAccessDashboardPage } from '@/lib/dashboard-permissions';
 import { prisma } from '@/lib/prisma';
 import { routes } from '@/utils/consts';
 
@@ -12,6 +13,9 @@ export default async function DebtsPage() {
   const session = await getServerSession(authOptions);
   if (!session) {
     redirect(routes.home);
+  }
+  if (!canAccessDashboardPage(session.user.role, 'debts')) {
+    redirect(routes.dashboard);
   }
 
   const [accessorySales, repairOrders, debts] = await Promise.all([
@@ -79,11 +83,11 @@ export default async function DebtsPage() {
   }));
 
   return (
-    <main className="min-h-screen bg-neutral-50 px-4 py-6 sm:py-8 lg:pl-76">
+    <main className="min-h-screen bg-neutral-50 px-3 py-3 sm:px-4 sm:py-8 lg:pl-76">
       <DashboardSidebar session={session} active="debts" />
 
       <div className="mx-auto max-w-7xl">
-        <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-8">
           <header className="border-b border-neutral-200 pb-4">
             <h2 className="text-2xl font-semibold text-neutral-900">Պարտքեր</h2>
             <p className="mt-1 text-sm text-neutral-600">

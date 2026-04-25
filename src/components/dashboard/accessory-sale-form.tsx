@@ -101,8 +101,8 @@ export function AccessorySaleForm({ accessories }: { accessories: AccessoryOptio
       ) : null}
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="w-full max-w-xl rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl sm:p-8">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 px-3 py-5">
+          <div className="max-h-full w-full max-w-xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-4 shadow-xl sm:p-8">
             <div className="mb-4 flex items-start justify-between gap-3 border-b border-neutral-200 pb-3">
               <div>
                 <h3 className="text-base font-semibold text-neutral-900">Նոր վաճառք</h3>
@@ -214,8 +214,8 @@ export function AccessorySaleForm({ accessories }: { accessories: AccessoryOptio
           </div>
 
           {pickerOpen ? (
-            <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 px-4 py-6">
-              <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-4 shadow-2xl sm:p-6">
+            <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 px-3 py-5">
+              <div className="max-h-full w-full max-w-5xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-4 shadow-2xl sm:p-6">
                 <div className="mb-4 flex items-start justify-between gap-3 border-b border-neutral-200 pb-3">
                   <div>
                     <h3 className="text-base font-semibold text-neutral-900">Ընտրել ակսեսուար</h3>

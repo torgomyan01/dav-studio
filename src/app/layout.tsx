@@ -6,6 +6,7 @@ import type { Metadata } from 'next';
 import { getServerSession } from 'next-auth';
 
 import { Providers } from '@/app/providers';
+import { AppInstallPrompt } from '@/components/app-install-prompt';
 import { authOptions } from '@/lib/auth';
 
 const SITE_NAME = 'Ohanyan Studio';
@@ -24,6 +25,16 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description: DEFAULT_DESCRIPTION,
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: SITE_NAME,
+  },
+  icons: {
+    icon: '/icons/pwa-icon.svg',
+    apple: '/icons/pwa-icon.svg',
+  },
   robots: {
     index: true,
     follow: true,
@@ -40,7 +51,10 @@ export default async function RootLayout({
   return (
     <html lang="hy" suppressHydrationWarning className="light">
       <body>
-        <Providers session={session}>{children}</Providers>
+        <Providers session={session}>
+          {children}
+          <AppInstallPrompt />
+        </Providers>
       </body>
     </html>
   );
