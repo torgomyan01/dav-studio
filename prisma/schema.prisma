@@ -93,9 +93,14 @@ model RepairOrder {
   netProfit    Decimal      @db.Decimal(10, 2)
   description  String       @db.Text
   status       RepairStatus @default(IN_PROGRESS)
+  completedAt  DateTime?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   debt         Debt?
+
+  @@index([status])
+  @@index([completedAt])
+  @@index([createdAt])
 }
 
 /// Կասայից կատարված օրվա լրացուցիչ ծախսեր

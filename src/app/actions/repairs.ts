@@ -7,6 +7,7 @@ import { Prisma, type RepairStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/lib/prisma';
+import { getUploadDir } from '@/lib/uploads';
 import { routes } from '@/utils/consts';
 import { normalizePhone } from '@/utils/phone';
 
@@ -47,7 +48,7 @@ export async function createRepairOrder(formData: FormData): Promise<CreateRepai
     const ext = extensionByMimeType(imageFile.type);
     if (!ext) return { ok: false, message: 'Նկարի ֆորմատը չի աջակցվում։' };
 
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'repairs');
+    const uploadsDir = getUploadDir('repairs');
     await mkdir(uploadsDir, { recursive: true });
 
     const filename = `${Date.now()}-${randomUUID()}.${ext}`;
@@ -145,6 +146,7 @@ export async function updateRepairOrder(formData: FormData): Promise<RepairActio
         expenses: expensesNumber,
         netProfit: netProfitNumber,
         description,
+        completedAt: null,
       },
     });
 
@@ -226,10 +228,15 @@ export async function updateRepairStatus(orderId: string): Promise<UpdateRepairS
 
   await prisma.repairOrder.update({
     where: { id },
-    data: { status: next },
+    data: {
+      status: next,
+      completedAt: next === 'COMPLETED' ? new Date() : row.completedAt,
+    },
   });
 
   revalidatePath(routes.dashboardRepairs);
+  revalidatePath(routes.dashboardAnalytics);
+  revalidatePath(routes.dashboard);
   return { ok: true, message: 'Ստատուսը թարմացվեց։' };
 }
 
@@ -248,7 +255,7 @@ async function saveRepairImage(
   const ext = extensionByMimeType(maybeFile.type);
   if (!ext) return { ok: false, message: 'Նկարի ֆորմատը չի աջակցվում։' };
 
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'repairs');
+  const uploadsDir = getUploadDir('repairs');
   await mkdir(uploadsDir, { recursive: true });
 
   const filename = `${Date.now()}-${randomUUID()}.${ext}`;

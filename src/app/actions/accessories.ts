@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '@/lib/prisma';
+import { getUploadDir } from '@/lib/uploads';
 import { routes } from '@/utils/consts';
 
 type AccessoryActionState =
@@ -182,12 +183,7 @@ async function saveAccessoryImage(
   const ext = extensionByMimeType(maybeFile.type);
   if (!ext) return { ok: false, message: 'Նկարի ֆորմատը չի աջակցվում։' };
 
-  const uploadsDir = path.join(
-    process.cwd(),
-    'public',
-    'uploads',
-    'accessories'
-  );
+  const uploadsDir = getUploadDir('accessories');
   await mkdir(uploadsDir, { recursive: true });
 
   const filename = `${Date.now()}-${randomUUID()}.${ext}`;

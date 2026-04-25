@@ -55,9 +55,10 @@ export default async function DashboardPage() {
       select: { totalSalePrice: true },
     }),
     prisma.repairOrder.findMany({
-      where: { createdAt: { gte: todayStart } },
+      where: repairIncomeWhere(todayStart),
       select: {
         createdAt: true,
+        completedAt: true,
         deviceName: true,
         customerName: true,
         customerPhone: true,
@@ -68,16 +69,16 @@ export default async function DashboardPage() {
       },
     }),
     prisma.repairOrder.findMany({
-      where: { createdAt: { gte: yesterdayStart, lt: todayStart } },
-      select: { expenses: true, netProfit: true },
+      where: repairIncomeWhere(yesterdayStart, todayStart),
+      select: { createdAt: true, completedAt: true, expenses: true, netProfit: true },
     }),
     prisma.accessorySale.findMany({
       where: { createdAt: { gte: weekStart } },
       select: { createdAt: true, totalSalePrice: true },
     }),
     prisma.repairOrder.findMany({
-      where: { createdAt: { gte: weekStart } },
-      select: { createdAt: true, expenses: true, netProfit: true },
+      where: repairIncomeWhere(weekStart),
+      select: { createdAt: true, completedAt: true, expenses: true, netProfit: true },
     }),
     prisma.accessory.findMany({
       where: { quantity: { lte: 5 } },
@@ -145,7 +146,7 @@ export default async function DashboardPage() {
       totalAmount: toNumber(item.expenses) + toNumber(item.netProfit),
       description: item.description,
       status: statusLabel(item.status),
-      createdAt: item.createdAt.toLocaleString('hy-AM'),
+      createdAt: (item.completedAt ?? item.createdAt).toLocaleString('hy-AM'),
     })),
   };
 
@@ -651,6 +652,20 @@ function startOfWeek(d: Date) {
   return res;
 }
 
+function repairIncomeWhere(from: Date, to?: Date) {
+  const range = to ? { gte: from, lt: to } : { gte: from };
+  return {
+    status: 'COMPLETED' as const,
+    OR: [
+      { completedAt: range },
+      {
+        completedAt: null,
+        createdAt: range,
+      },
+    ],
+  };
+}
+
 function toNumber(v: { toString(): string }): number {
   return Number(v.toString());
 }
@@ -693,7 +708,12 @@ function motivationMessage(todayIncome: number, yesterdayIncome: number, remaini
 function getWeekRecord(
   weekStart: Date,
   accessorySales: Array<{ createdAt: Date; totalSalePrice: { toString(): string } }>,
-  repairs: Array<{ createdAt: Date; expenses: { toString(): string }; netProfit: { toString(): string } }>,
+  repairs: Array<{
+    createdAt: Date;
+    completedAt: Date | null;
+    expenses: { toString(): string };
+    netProfit: { toString(): string };
+  }>,
 ) {
   const rows = Array.from({ length: 7 }, (_, index) => {
     const day = new Date(weekStart);
@@ -706,7 +726,7 @@ function getWeekRecord(
     if (row) row.income += toNumber(sale.totalSalePrice);
   }
   for (const repair of repairs) {
-    const row = rows.find((item) => isSameDay(item.date, repair.createdAt));
+    const row = rows.find((item) => isSameDay(item.date, repair.completedAt ?? repair.createdAt));
     if (row) row.income += toNumber(repair.expenses) + toNumber(repair.netProfit);
   }
 

@@ -10,6 +10,7 @@ import { routes } from '@/utils/consts';
 
 type RepairLike = {
   createdAt: Date;
+  completedAt: Date | null;
   status: 'IN_PROGRESS' | 'READY_FOR_PICKUP' | 'COMPLETED';
   expenses: { toString(): string };
   netProfit: { toString(): string };
@@ -73,6 +74,7 @@ export default async function AnalyticsPage() {
       orderBy: { createdAt: 'desc' },
       select: {
         createdAt: true,
+        completedAt: true,
         status: true,
         expenses: true,
         netProfit: true,
@@ -114,29 +116,33 @@ export default async function AnalyticsPage() {
 
   const daily = computeMetrics(
     repairs.filter((r) => r.createdAt >= dayStart),
+    repairs.filter((r) => isCompletedRepairIncomeInRange(r, dayStart)),
     accessories.filter((a) => a.createdAt >= dayStart),
     debts.filter((d) => d.createdAt >= dayStart),
     debtPayments.filter((p) => p.paidAt >= dayStart),
   );
   const weekly = computeMetrics(
     repairs.filter((r) => r.createdAt >= weekStart),
+    repairs.filter((r) => isCompletedRepairIncomeInRange(r, weekStart)),
     accessories.filter((a) => a.createdAt >= weekStart),
     debts.filter((d) => d.createdAt >= weekStart),
     debtPayments.filter((p) => p.paidAt >= weekStart),
   );
   const monthly = computeMetrics(
     repairs.filter((r) => r.createdAt >= monthStart),
+    repairs.filter((r) => isCompletedRepairIncomeInRange(r, monthStart)),
     accessories.filter((a) => a.createdAt >= monthStart),
     debts.filter((d) => d.createdAt >= monthStart),
     debtPayments.filter((p) => p.paidAt >= monthStart),
   );
   const yearly = computeMetrics(
     repairs.filter((r) => r.createdAt >= yearStart),
+    repairs.filter((r) => isCompletedRepairIncomeInRange(r, yearStart)),
     accessories.filter((a) => a.createdAt >= yearStart),
     debts.filter((d) => d.createdAt >= yearStart),
     debtPayments.filter((p) => p.paidAt >= yearStart),
   );
-  const allTime = computeMetrics(repairs, accessories, debts, debtPayments);
+  const allTime = computeMetrics(repairs, repairs.filter(isCompletedRepairIncome), accessories, debts, debtPayments);
 
   const topDevices = summarizeRepairsByDevice(repairs).slice(0, 8);
   const topAccessories = summarizeAccessoriesByName(accessories).slice(0, 8);
@@ -184,6 +190,7 @@ function toNumber(v: { toString(): string }): number {
 
 function computeMetrics(
   repairs: RepairLike[],
+  repairIncomeRows: RepairLike[],
   accessories: AccessoryLike[],
   debts: DebtLike[],
   debtPayments: DebtPaymentLike[],
@@ -192,9 +199,9 @@ function computeMetrics(
   const completedRepairs = repairs.filter((r) => r.status === 'COMPLETED').length;
   const inProgressRepairs = repairs.filter((r) => r.status === 'IN_PROGRESS').length;
   const readyRepairs = repairs.filter((r) => r.status === 'READY_FOR_PICKUP').length;
-  const expensesTotal = repairs.reduce((sum, r) => sum + toNumber(r.expenses), 0);
-  const netProfitTotal = repairs.reduce((sum, r) => sum + toNumber(r.netProfit), 0);
-  const averageProfit = repairsCount === 0 ? 0 : netProfitTotal / repairsCount;
+  const expensesTotal = repairIncomeRows.reduce((sum, r) => sum + toNumber(r.expenses), 0);
+  const netProfitTotal = repairIncomeRows.reduce((sum, r) => sum + toNumber(r.netProfit), 0);
+  const averageProfit = repairIncomeRows.length === 0 ? 0 : netProfitTotal / repairIncomeRows.length;
   const accessoriesCount = accessories.length;
   const accessoriesQuantity = accessories.reduce((sum, a) => sum + a.quantity, 0);
   const accessoriesValue = accessories.reduce((sum, a) => sum + toNumber(a.costPrice) * a.quantity, 0);
@@ -300,13 +307,27 @@ function buildYearlyTrendLastYears(repairs: RepairLike[], years: number) {
 }
 
 function repairsInRange(repairs: RepairLike[], from: Date, to: Date) {
-  return repairs.filter((r) => r.createdAt >= from && r.createdAt < to);
+  return repairs.filter((r) => isCompletedRepairIncomeInRange(r, from, to));
 }
 
 function trendRow(label: string, repairs: RepairLike[]): TrendRow {
   const expenses = repairs.reduce((sum, r) => sum + toNumber(r.expenses), 0);
   const profit = repairs.reduce((sum, r) => sum + toNumber(r.netProfit), 0);
   return { label, repairs: repairs.length, expenses, profit };
+}
+
+function isCompletedRepairIncome(repair: RepairLike) {
+  return repair.status === 'COMPLETED';
+}
+
+function repairIncomeDate(repair: RepairLike) {
+  return repair.completedAt ?? repair.createdAt;
+}
+
+function isCompletedRepairIncomeInRange(repair: RepairLike, from: Date, to?: Date) {
+  if (!isCompletedRepairIncome(repair)) return false;
+  const incomeDate = repairIncomeDate(repair);
+  return incomeDate >= from && (!to || incomeDate < to);
 }
 
 function startOfDay(d: Date) {

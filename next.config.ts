@@ -20,6 +20,8 @@ const nextConfig = {
     includePaths: [path.join(__dirname, 'src')],
   },
   images: {
+    // Runtime upload-ները պահվում են /public/uploads-ում, ու production-ում պետք է բացվեն ուղիղ static URL-ով։
+    unoptimized: true,
     remotePatterns: [
       {
         hostname: '**',
