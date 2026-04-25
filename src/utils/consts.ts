@@ -5,6 +5,7 @@ export const routes = {
   dashboardAccessories: '/dashboard/accessories',
   dashboardAccessorySales: '/dashboard/accessory-sales',
   dashboardRepairs: '/dashboard/repairs',
+  dashboardExpenses: '/dashboard/expenses',
   dashboardDebts: '/dashboard/debts',
   dashboardAnalytics: '/dashboard/analytics',
   forgotPassword: '/forgot-password',

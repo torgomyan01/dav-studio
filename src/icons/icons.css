@@ -214,6 +214,10 @@
   content: '\f02d';
 }
 
+.fa-wallet:before {
+  content: '\f555';
+}
+
 .fa-grip-vertical:before {
   content: '\f047';
 }
@@ -221,6 +225,10 @@
 /* Ohanyan Studio — հեռախոս / ակսեսուար (ավելացնել unicode-ները ձեռքով) */
 .fa-mobile-screen-button:before {
   content: '\f3cd';
+}
+
+.fa-image:before {
+  content: '\f03e';
 }
 
 .fa-screwdriver-wrench:before {

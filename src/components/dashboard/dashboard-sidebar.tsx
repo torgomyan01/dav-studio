@@ -9,6 +9,7 @@ type DashboardMenuKey =
   | 'accessories'
   | 'accessorySales'
   | 'repairs'
+  | 'expenses'
   | 'debts'
   | 'analytics';
 
@@ -60,6 +61,13 @@ export function DashboardSidebar({
       description: 'Պատվերներ և ստատուսներ',
       iconClass: 'fa-solid fa-screwdriver-wrench',
       href: routes.dashboardRepairs,
+    },
+    {
+      key: 'expenses',
+      title: 'Օրվա ծախսեր',
+      description: 'Կասայից դուրս եկած գումարներ',
+      iconClass: 'fa-solid fa-wallet',
+      href: routes.dashboardExpenses,
     },
     {
       key: 'debts',
