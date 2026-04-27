@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
+import { BackButton } from '@/components/back-button';
 import { DashboardSidebar } from '@/components/dashboard/dashboard-sidebar';
 import { DebtCreateForm } from '@/components/dashboard/debt-create-form';
 import { DebtPaymentForm } from '@/components/dashboard/debt-payment-form';
@@ -87,6 +88,7 @@ export default async function DebtsPage() {
       <DashboardSidebar session={session} active="debts" />
 
       <div className="mx-auto max-w-7xl">
+        <BackButton />
         <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-8">
           <header className="border-b border-neutral-200 pb-4">
             <h2 className="text-2xl font-semibold text-neutral-900">Պարտքեր</h2>

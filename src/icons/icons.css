@@ -210,6 +210,10 @@
   content: '\f015';
 }
 
+.fa-arrow-left:before {
+  content: '\f060';
+}
+
 .fa-book:before {
   content: '\f02d';
 }

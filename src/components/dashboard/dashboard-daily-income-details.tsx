@@ -7,6 +7,7 @@ type AccessoryDetail = {
   quantity: number;
   unitSalePrice: number;
   totalSalePrice: number;
+  netProfit: number;
   createdAt: string;
 };
 
@@ -31,8 +32,8 @@ export function DashboardDailyIncomeDetails({ details }: { details: DailyIncomeD
   const [open, setOpen] = useState(false);
   const totals = useMemo(
     () => ({
-      accessoryTotal: details.accessories.reduce((sum, item) => sum + item.totalSalePrice, 0),
-      repairTotal: details.repairs.reduce((sum, item) => sum + item.totalAmount, 0),
+      accessoryNetProfit: details.accessories.reduce((sum, item) => sum + item.netProfit, 0),
+      repairNetProfit: details.repairs.reduce((sum, item) => sum + item.netProfit, 0),
       soldQuantity: details.accessories.reduce((sum, item) => sum + item.quantity, 0),
     }),
     [details],
@@ -46,7 +47,7 @@ export function DashboardDailyIncomeDetails({ details }: { details: DailyIncomeD
         className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green/90 sm:w-auto"
       >
         <i className="fa-solid fa-list-check text-xs" />
-        Տեսնել մանրամասները
+        Տեսնել մաքուր շահույթը
       </button>
 
       {open && (
@@ -55,10 +56,11 @@ export function DashboardDailyIncomeDetails({ details }: { details: DailyIncomeD
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 p-4 sm:p-5">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-green">Օրվա մանրամասն հաշվետվություն</p>
-                <h3 className="mt-1 text-xl font-semibold text-neutral-900">Ակսեսուարի վաճառքներ և վերանորոգման պատվերներ</h3>
+                <h3 className="mt-1 text-xl font-semibold text-neutral-900">Օրվա մաքուր շահույթի մանրամասներ</h3>
                 <p className="mt-1 text-sm text-neutral-600">
-                  Վաճառված ապրանք՝ {totals.soldQuantity} հատ · Ակսեսուարներից՝ {formatMoney(totals.accessoryTotal)} ·
-                  Վերանորոգումից՝ {formatMoney(totals.repairTotal)}
+                  Վաճառված ապրանք՝ {totals.soldQuantity} հատ · Ակսեսուարների մաքուր շահույթ՝{' '}
+                  {formatMoney(totals.accessoryNetProfit)} · Վերանորոգման մաքուր շահույթ՝{' '}
+                  {formatMoney(totals.repairNetProfit)}
                 </p>
               </div>
               <button
@@ -79,7 +81,7 @@ export function DashboardDailyIncomeDetails({ details }: { details: DailyIncomeD
                       <p className="text-xs text-neutral-500">{details.accessories.length} վաճառք</p>
                     </div>
                     <span className="rounded-full bg-green/10 px-3 py-1 text-xs font-semibold text-green">
-                      {formatMoney(totals.accessoryTotal)}
+                      Մաքուր՝ {formatMoney(totals.accessoryNetProfit)}
                     </span>
                   </div>
 
@@ -94,11 +96,16 @@ export function DashboardDailyIncomeDetails({ details }: { details: DailyIncomeD
                               <p className="font-semibold text-neutral-900">{item.name}</p>
                               <p className="mt-1 text-xs text-neutral-500">{item.createdAt}</p>
                             </div>
-                            <p className="text-sm font-semibold text-green">{formatMoney(item.totalSalePrice)}</p>
+                            <p className="text-right text-sm font-semibold text-green">
+                              <span className="block text-xs font-medium text-neutral-500">Մաքուր շահույթ</span>
+                              {formatMoney(item.netProfit)}
+                            </p>
                           </div>
                           <div className="mt-3 grid gap-2 text-xs text-neutral-600 sm:grid-cols-2">
                             <span>Քանակ՝ {item.quantity} հատ</span>
                             <span>Միավորի գին՝ {formatMoney(item.unitSalePrice)}</span>
+                            <span>Ընդհանուր վաճառք՝ {formatMoney(item.totalSalePrice)}</span>
+                            <span>Մաքուր շահույթ՝ {formatMoney(item.netProfit)}</span>
                           </div>
                         </div>
                       ))}
@@ -113,7 +120,7 @@ export function DashboardDailyIncomeDetails({ details }: { details: DailyIncomeD
                       <p className="text-xs text-neutral-500">{details.repairs.length} պատվեր</p>
                     </div>
                     <span className="rounded-full bg-green/10 px-3 py-1 text-xs font-semibold text-green">
-                      {formatMoney(totals.repairTotal)}
+                      Մաքուր՝ {formatMoney(totals.repairNetProfit)}
                     </span>
                   </div>
 
@@ -130,11 +137,15 @@ export function DashboardDailyIncomeDetails({ details }: { details: DailyIncomeD
                                 {item.customerName} · {item.customerPhone}
                               </p>
                             </div>
-                            <p className="text-sm font-semibold text-green">{formatMoney(item.totalAmount)}</p>
+                            <p className="text-right text-sm font-semibold text-green">
+                              <span className="block text-xs font-medium text-neutral-500">Մաքուր շահույթ</span>
+                              {formatMoney(item.netProfit)}
+                            </p>
                           </div>
                           <div className="mt-3 grid gap-2 text-xs text-neutral-600 sm:grid-cols-2">
                             <span>Ծախս՝ {formatMoney(item.expenses)}</span>
                             <span>Մաքուր շահույթ՝ {formatMoney(item.netProfit)}</span>
+                            <span>Ընդհանուր արժեք՝ {formatMoney(item.totalAmount)}</span>
                             <span>Կարգավիճակ՝ {item.status}</span>
                             <span>{item.createdAt}</span>
                           </div>

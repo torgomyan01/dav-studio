@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
+import { BackButton } from '@/components/back-button';
 import { DashboardDailyIncomeDetails } from '@/components/dashboard/dashboard-daily-income-details';
 import { DashboardSidebar } from '@/components/dashboard/dashboard-sidebar';
 import { authOptions } from '@/lib/auth';
@@ -46,13 +47,22 @@ export default async function DashboardPage() {
         accessory: {
           select: {
             name: true,
+            costPrice: true,
           },
         },
       },
     }),
     prisma.accessorySale.findMany({
       where: { createdAt: { gte: yesterdayStart, lt: todayStart } },
-      select: { totalSalePrice: true },
+      select: {
+        quantity: true,
+        totalSalePrice: true,
+        accessory: {
+          select: {
+            costPrice: true,
+          },
+        },
+      },
     }),
     prisma.repairOrder.findMany({
       where: repairIncomeWhere(todayStart),
@@ -74,7 +84,16 @@ export default async function DashboardPage() {
     }),
     prisma.accessorySale.findMany({
       where: { createdAt: { gte: weekStart } },
-      select: { createdAt: true, totalSalePrice: true },
+      select: {
+        createdAt: true,
+        quantity: true,
+        totalSalePrice: true,
+        accessory: {
+          select: {
+            costPrice: true,
+          },
+        },
+      },
     }),
     prisma.repairOrder.findMany({
       where: repairIncomeWhere(weekStart),
@@ -104,27 +123,32 @@ export default async function DashboardPage() {
   ]);
 
   const todayAccessoryIncome = sumValues(todayAccessorySales.map((row) => row.totalSalePrice));
-  const yesterdayAccessoryIncome = sumValues(yesterdayAccessorySales.map((row) => row.totalSalePrice));
   const todayRepairIncome = sumRepairIncome(todayRepairs);
-  const yesterdayRepairIncome = sumRepairIncome(yesterdayRepairs);
+  const todayAccessoryNetProfit = sumAccessoryNetProfit(todayAccessorySales);
+  const yesterdayAccessoryNetProfit = sumAccessoryNetProfit(yesterdayAccessorySales);
+  const todayRepairNetProfit = sumValues(todayRepairs.map((row) => row.netProfit));
+  const yesterdayRepairNetProfit = sumValues(yesterdayRepairs.map((row) => row.netProfit));
   const todayIncome = todayAccessoryIncome + todayRepairIncome;
-  const yesterdayIncome = yesterdayAccessoryIncome + yesterdayRepairIncome;
-  const remainingToBeatYesterday = Math.max(yesterdayIncome - todayIncome + 1, 0);
+  const todayBusinessNetProfit = todayAccessoryNetProfit + todayRepairNetProfit;
+  const yesterdayBusinessNetProfit = yesterdayAccessoryNetProfit + yesterdayRepairNetProfit;
+  const remainingToBeatYesterday = Math.max(yesterdayBusinessNetProfit - todayBusinessNetProfit + 1, 0);
   const progressPercent =
-    yesterdayIncome <= 0 ? (todayIncome > 0 ? 100 : 0) : Math.min((todayIncome / yesterdayIncome) * 100, 100);
+    yesterdayBusinessNetProfit <= 0
+      ? (todayBusinessNetProfit > 0 ? 100 : 0)
+      : Math.min((todayBusinessNetProfit / yesterdayBusinessNetProfit) * 100, 100);
   const todayActionsCount = todayAccessorySales.length + todayRepairs.length;
   const yesterdayActionsCount = yesterdayAccessorySales.length + yesterdayRepairs.length;
-  const dailyGoal = Math.max(Math.ceil((yesterdayIncome || 50000) * 1.1), 50000);
-  const goalProgressPercent = Math.min((todayIncome / dailyGoal) * 100, 100);
+  const dailyGoal = Math.max(Math.ceil((yesterdayBusinessNetProfit || 50000) * 1.1), 50000);
+  const goalProgressPercent = Math.min((todayBusinessNetProfit / dailyGoal) * 100, 100);
   const weekRecord = getWeekRecord(weekStart, weekAccessorySales, weekRepairs);
-  const strongSection = getStrongSection(todayAccessoryIncome, todayRepairIncome);
+  const strongSection = getStrongSection(todayAccessoryNetProfit, todayRepairNetProfit);
   const overdueDebtAmount = sumValues(overdueDebts.map((row) => row.remainingAmount));
   const todayDebtPaid = sumValues(todayDebtPayments.map((row) => row.amount));
   const todayCashExpenseTotal = sumValues(todayCashExpenses.map((row) => row.amount));
   const todayCashExpenseCount = todayCashExpenses.length;
-  const todayFinalResult = todayIncome - todayCashExpenseTotal;
-  const expenseRatio = todayIncome > 0 ? (todayCashExpenseTotal / todayIncome) * 100 : 0;
-  const isSlowDay = now.getHours() >= 14 && todayIncome < dailyGoal * 0.35;
+  const todayFinalResult = todayBusinessNetProfit - todayCashExpenseTotal;
+  const expenseRatio = todayBusinessNetProfit > 0 ? (todayCashExpenseTotal / todayBusinessNetProfit) * 100 : 0;
+  const isSlowDay = now.getHours() >= 14 && todayBusinessNetProfit < dailyGoal * 0.35;
   const dayTip = getDayTip(strongSection.key, lowStockAccessories.length, overdueDebts.length, isSlowDay);
   const expenseMotivation = getExpenseMotivation(todayCashExpenseCount, expenseRatio, todayFinalResult);
   const todayAccessoryShare = todayIncome > 0 ? (todayAccessoryIncome / todayIncome) * 100 : 0;
@@ -135,6 +159,7 @@ export default async function DashboardPage() {
       quantity: item.quantity,
       unitSalePrice: toNumber(item.unitSalePrice),
       totalSalePrice: toNumber(item.totalSalePrice),
+      netProfit: toNumber(item.totalSalePrice) - toNumber(item.accessory.costPrice) * item.quantity,
       createdAt: item.createdAt.toLocaleString('hy-AM'),
     })),
     repairs: todayRepairs.map((item) => ({
@@ -155,6 +180,7 @@ export default async function DashboardPage() {
       <DashboardSidebar session={session} active="home" />
 
       <div className="mx-auto max-w-6xl">
+        <BackButton />
         <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-8">
           <header className="mb-6 border-b border-neutral-200 pb-4">
             <h2 className="text-2xl font-semibold text-neutral-900">Վահանակ</h2>
@@ -170,12 +196,12 @@ export default async function DashboardPage() {
                   Օրվա մոտիվացիա
                 </p>
                 <h3 className="mt-1 text-xl font-semibold text-neutral-900">
-                  {motivationTitle(todayIncome, yesterdayIncome)}
+                  {motivationTitle(todayBusinessNetProfit, yesterdayBusinessNetProfit)}
                 </h3>
                 <p className="mt-2 max-w-2xl text-sm text-neutral-600">
                   {motivationMessage(
-                    todayIncome,
-                    yesterdayIncome,
+                    todayBusinessNetProfit,
+                    yesterdayBusinessNetProfit,
                     remainingToBeatYesterday
                   )}
                 </p>
@@ -186,7 +212,7 @@ export default async function DashboardPage() {
                   {formatMoney(todayIncome)}
                 </p>
                 <p className="mt-1 text-xs text-neutral-500">
-                  Ծախսերից հետո՝{' '}
+                  Մաքուր շահույթ՝{' '}
                   <span
                     className={
                       todayFinalResult >= 0 ? 'text-green' : 'text-red-700'
@@ -200,8 +226,8 @@ export default async function DashboardPage() {
 
             <div className="mt-5 grid gap-3 md:grid-cols-4">
               <MotivationMetric
-                title="Երեկվա եկամուտ"
-                value={formatMoney(yesterdayIncome)}
+                title="Երեկվա մաքուր շահույթ"
+                value={formatMoney(yesterdayBusinessNetProfit)}
               />
               <MotivationMetric
                 title="Երեկը անցնելու համար"
@@ -226,14 +252,14 @@ export default async function DashboardPage() {
                 value={formatMoney(todayCashExpenseTotal)}
               />
               <MotivationMetric
-                title="Օրվա վերջնական արդյունք"
+                title="Օրվա մաքուր շահույթ"
                 value={formatMoney(todayFinalResult)}
               />
             </div>
 
             <div className="mt-4">
               <div className="mb-1 flex items-center justify-between text-xs text-neutral-500">
-                <span>Երեկվա արդյունքը անցնելու պրոգրես</span>
+                <span>Երեկվա մաքուր շահույթը անցնելու պրոգրես</span>
                 <span>{Math.round(progressPercent)}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-neutral-200">
@@ -266,7 +292,7 @@ export default async function DashboardPage() {
                   </p>
                 </div>
                 <div className="rounded-xl border border-blue-100 bg-white px-4 py-3 shadow-sm">
-                  <p className="text-xs text-neutral-500">Ծախս / եկամուտ</p>
+                  <p className="text-xs text-neutral-500">Ծախս / մաքուր շահույթ</p>
                   <p
                     className={`mt-1 text-xl font-semibold ${expenseRatio > 35 ? 'text-red-700' : 'text-green'}`}
                   >
@@ -278,7 +304,7 @@ export default async function DashboardPage() {
 
             <div className="mt-4">
               <div className="mb-1 flex items-center justify-between text-xs text-neutral-500">
-                <span>Ծախսերի հարաբերակցություն եկամտին</span>
+                <span>Ծախսերի հարաբերակցություն մաքուր շահույթին</span>
                 <span>{Math.round(Math.min(expenseRatio, 100))}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-white">
@@ -307,8 +333,8 @@ export default async function DashboardPage() {
                   Որտեղից է եկել այսօրվա գումարը
                 </h3>
                 <p className="mt-1 text-sm text-neutral-600">
-                  Ակսեսուարների վաճառք՝ {formatMoney(todayAccessoryIncome)} ·
-                  Վերանորոգում՝ {formatMoney(todayRepairIncome)}
+                  Ակսեսուարների մաքուր շահույթ՝ {formatMoney(todayAccessoryNetProfit)} ·
+                  Վերանորոգման մաքուր շահույթ՝ {formatMoney(todayRepairNetProfit)}
                 </p>
               </div>
               <DashboardDailyIncomeDetails details={dailyIncomeDetails} />
@@ -319,14 +345,14 @@ export default async function DashboardPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-neutral-900">
-                      Ակսեսուարներից վաճառք
+                      Ակսեսուարներից մաքուր շահույթ
                     </p>
                     <p className="mt-1 text-xs text-neutral-500">
                       {todayAccessorySales.length} վաճառք
                     </p>
                   </div>
                   <p className="text-lg font-semibold text-green">
-                    {formatMoney(todayAccessoryIncome)}
+                    {formatMoney(todayAccessoryNetProfit)}
                   </p>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-200">
@@ -336,7 +362,7 @@ export default async function DashboardPage() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-neutral-500">
-                  Օրվա եկամտի {Math.round(todayAccessoryShare)}%
+                  Ընդհանուր վաճառք՝ {formatMoney(todayAccessoryIncome)} · Օրվա եկամտի {Math.round(todayAccessoryShare)}%
                 </p>
               </div>
 
@@ -344,14 +370,14 @@ export default async function DashboardPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-neutral-900">
-                      Վերանորոգումներից
+                      Վերանորոգումներից մաքուր շահույթ
                     </p>
                     <p className="mt-1 text-xs text-neutral-500">
                       {todayRepairs.length} պատվեր
                     </p>
                   </div>
                   <p className="text-lg font-semibold text-green">
-                    {formatMoney(todayRepairIncome)}
+                    {formatMoney(todayRepairNetProfit)}
                   </p>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-200">
@@ -361,7 +387,7 @@ export default async function DashboardPage() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-neutral-500">
-                  Օրվա եկամտի {Math.round(todayRepairShare)}%
+                  Ընդհանուր արժեք՝ {formatMoney(todayRepairIncome)} · Օրվա եկամտի {Math.round(todayRepairShare)}%
                 </p>
               </div>
             </div>
@@ -370,14 +396,14 @@ export default async function DashboardPage() {
           <section className="mb-6 grid gap-4 lg:grid-cols-3">
             <InsightCard
               icon="fa-solid fa-bullseye"
-              title="Օրվա նպատակ"
+              title="Օրվա մաքուր շահույթի նպատակ"
               value={formatMoney(dailyGoal)}
-              text={`Այսօր լրացված է ${Math.round(goalProgressPercent)}%։ Նպատակին մնացել է ${formatMoney(Math.max(dailyGoal - todayIncome, 0))}։`}
+              text={`Այսօր լրացված է ${Math.round(goalProgressPercent)}%։ Նպատակին մնացել է ${formatMoney(Math.max(dailyGoal - todayBusinessNetProfit, 0))}։`}
               progress={goalProgressPercent}
             />
             <InsightCard
               icon="fa-solid fa-trophy"
-              title="Շաբաթվա ռեկորդ"
+              title="Շաբաթվա մաքուր ռեկորդ"
               value={
                 weekRecord.income > 0
                   ? formatMoney(weekRecord.income)
@@ -472,13 +498,13 @@ export default async function DashboardPage() {
                   Կասայի օրվա արդյունք
                 </p>
                 <p className="mt-1 text-sm text-neutral-600">
-                  Եկամուտ՝ {formatMoney(todayIncome)} · Ծախս՝{' '}
-                  {formatMoney(todayCashExpenseTotal)} · Գրառում՝{' '}
+                  Եկամուտ՝ {formatMoney(todayIncome)} · Մաքուր շահույթ՝{' '}
+                  {formatMoney(todayBusinessNetProfit)} · Կասայի ծախս՝ {formatMoney(todayCashExpenseTotal)} · Գրառում՝{' '}
                   {todayCashExpenseCount} հատ
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-neutral-500">Վերջնական արդյունք</p>
+                <p className="text-xs text-neutral-500">Օրվա մաքուր շահույթ</p>
                 <p
                   className={`text-xl font-semibold ${todayFinalResult >= 0 ? 'text-green' : 'text-red-700'}`}
                 >
@@ -674,6 +700,19 @@ function sumValues(values: Array<{ toString(): string }>) {
   return values.reduce<number>((sum, value) => sum + toNumber(value), 0);
 }
 
+function sumAccessoryNetProfit(
+  rows: Array<{
+    quantity: number;
+    totalSalePrice: { toString(): string };
+    accessory: { costPrice: { toString(): string } };
+  }>,
+) {
+  return rows.reduce<number>(
+    (sum, row) => sum + toNumber(row.totalSalePrice) - toNumber(row.accessory.costPrice) * row.quantity,
+    0,
+  );
+}
+
 function sumRepairIncome(rows: Array<{ expenses: { toString(): string }; netProfit: { toString(): string } }>) {
   return rows.reduce<number>((sum, row) => sum + toNumber(row.expenses) + toNumber(row.netProfit), 0);
 }
@@ -688,26 +727,31 @@ function statusLabel(status: string) {
   return 'Ընթացքի մեջ';
 }
 
-function motivationTitle(todayIncome: number, yesterdayIncome: number) {
-  if (todayIncome === 0 && yesterdayIncome === 0) return 'Այսօր լավ օր սկսելու ժամանակն է';
-  if (todayIncome > yesterdayIncome) return 'Այսօր արդեն անցել ես երեկվա արդյունքը';
-  if (todayIncome === yesterdayIncome && todayIncome > 0) return 'Այսօր հավասարվել ես երեկվան';
-  return 'Այսօր նպատակդ երեկվա արդյունքը գերազանցելն է';
+function motivationTitle(todayProfit: number, yesterdayProfit: number) {
+  if (todayProfit === 0 && yesterdayProfit === 0) return 'Այսօր լավ մաքուր շահույթ սկսելու ժամանակն է';
+  if (todayProfit > yesterdayProfit) return 'Այսօր արդեն անցել ես երեկվա մաքուր շահույթը';
+  if (todayProfit === yesterdayProfit && todayProfit > 0) return 'Այսօր հավասարվել ես երեկվա մաքուր շահույթին';
+  return 'Այսօր նպատակդ երեկվա մաքուր շահույթը գերազանցելն է';
 }
 
-function motivationMessage(todayIncome: number, yesterdayIncome: number, remaining: number) {
-  if (todayIncome > yesterdayIncome) {
-    return 'Շատ լավ տեմպ է․ հիմա նպատակն է պահել ռիթմը և օրը փակել ավելի ուժեղ արդյունքով։';
+function motivationMessage(todayProfit: number, yesterdayProfit: number, remaining: number) {
+  if (todayProfit > yesterdayProfit) {
+    return 'Շատ լավ տեմպ է․ հիմա նպատակն է պահել ռիթմը և օրը փակել ավելի ուժեղ մաքուր շահույթով։';
   }
-  if (yesterdayIncome === 0) {
-    return 'Երեկ եկամուտ չի գրանցվել, այսօրվա ամեն վաճառք կամ պատվեր արդեն առաջընթաց է։';
+  if (yesterdayProfit === 0) {
+    return 'Երեկ մաքուր շահույթ չի գրանցվել, այսօրվա ամեն շահութաբեր վաճառք կամ ավարտված պատվեր արդեն առաջընթաց է։';
   }
-  return `Երեկվա արդյունքը անցնելու համար մնացել է մոտ ${formatMoney(remaining)}։ Փոքր քայլերով փակիր տարբերությունը՝ մեկ վաճառք, մեկ պատվեր, մեկ լավ սպասարկում։`;
+  return `Երեկվա մաքուր շահույթը անցնելու համար մնացել է մոտ ${formatMoney(remaining)}։ Փոքր քայլերով փակիր տարբերությունը՝ մեկ շահութաբեր վաճառք, մեկ ավարտված պատվեր, մեկ լավ սպասարկում։`;
 }
 
 function getWeekRecord(
   weekStart: Date,
-  accessorySales: Array<{ createdAt: Date; totalSalePrice: { toString(): string } }>,
+  accessorySales: Array<{
+    createdAt: Date;
+    quantity: number;
+    totalSalePrice: { toString(): string };
+    accessory: { costPrice: { toString(): string } };
+  }>,
   repairs: Array<{
     createdAt: Date;
     completedAt: Date | null;
@@ -723,11 +767,11 @@ function getWeekRecord(
 
   for (const sale of accessorySales) {
     const row = rows.find((item) => isSameDay(item.date, sale.createdAt));
-    if (row) row.income += toNumber(sale.totalSalePrice);
+    if (row) row.income += toNumber(sale.totalSalePrice) - toNumber(sale.accessory.costPrice) * sale.quantity;
   }
   for (const repair of repairs) {
     const row = rows.find((item) => isSameDay(item.date, repair.completedAt ?? repair.createdAt));
-    if (row) row.income += toNumber(repair.expenses) + toNumber(repair.netProfit);
+    if (row) row.income += toNumber(repair.netProfit);
   }
 
   const best = rows.reduce((max, row) => (row.income > max.income ? row : max), rows[0]);
@@ -746,7 +790,7 @@ function getStrongSection(accessoryIncome: number, repairIncome: number) {
     return {
       key: 'none',
       label: 'Սկիզբը դեռ առջևում է',
-      message: 'Այսօր դեռ եկամուտ չկա․ առաջին գրանցումը կարող է փոխել ամբողջ օրվա տեմպը։',
+      message: 'Այսօր դեռ մաքուր շահույթ չկա․ առաջին շահութաբեր գրանցումը կարող է փոխել ամբողջ օրվա տեմպը։',
     };
   }
   if (accessoryIncome >= repairIncome) {
@@ -781,13 +825,13 @@ function getExpenseMotivation(expenseCount: number, expenseRatio: number, finalR
   }
   if (finalResult < 0) {
     return {
-      title: 'Ծախսերը գերազանցել են օրվա եկամուտը',
+      title: 'Ծախսերը գերազանցել են օրվա մաքուր շահույթը',
       message: 'Այսօր պետք է ուշադիր լինել․ փորձիր մինչև օրվա վերջ ավելացնել վաճառք կամ հավաքել պարտքի մարում, որ կասան դրական փակվի։',
     };
   }
   if (expenseRatio > 35) {
     return {
-      title: 'Ծախսերը բարձր են օրվա եկամտի համեմատ',
+      title: 'Ծախսերը բարձր են օրվա մաքուր շահույթի համեմատ',
       message: 'Ծախսերը վերահսկելի պահելու համար նոր վճարումից առաջ ստուգիր՝ արդյոք այն այսօր պարտադիր է, թե կարելի է տեղափոխել։',
     };
   }

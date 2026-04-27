@@ -2,6 +2,7 @@ import { Role } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
+import { BackButton } from '@/components/back-button';
 import { DashboardSidebar } from '@/components/dashboard/dashboard-sidebar';
 import { UserCreateForm } from '@/components/dashboard/user-create-form';
 import { UserRowActions } from '@/components/dashboard/user-row-actions';
@@ -47,6 +48,7 @@ export default async function UsersPage() {
       <DashboardSidebar session={session} active="users" />
 
       <div className="mx-auto max-w-6xl">
+        <BackButton />
         <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-8">
           <header className="border-b border-neutral-200 pb-4">
             <h2 className="text-2xl font-semibold text-neutral-900">Օգտատերեր</h2>

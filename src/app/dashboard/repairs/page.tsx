@@ -1,9 +1,11 @@
 import type { Prisma } from '@prisma/client';
+import type { ReactNode } from 'react';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { BackButton } from '@/components/back-button';
 import { DashboardSidebar } from '@/components/dashboard/dashboard-sidebar';
 import { RepairCreateForm } from '@/components/dashboard/repair-create-form';
 import { RepairRowActions } from '@/components/dashboard/repair-row-actions';
@@ -19,7 +21,10 @@ type RepairsSearchParams = {
   device?: string;
   sort?: string;
   dir?: string;
+  page?: string;
 };
+
+const PAGE_SIZE = 10;
 
 const statusLabel = {
   IN_PROGRESS: 'Վերանորոգման փուլում',
@@ -54,6 +59,9 @@ export default async function RepairsPage({
     ? (sp.sort as 'createdAt' | 'deviceName' | 'customerName' | 'expenses' | 'netProfit' | 'status')
     : 'createdAt';
   const dir = sp.dir === 'asc' ? 'asc' : 'desc';
+  const requestedPage = Number(sp.page ?? '1');
+  const currentPage = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const skip = (currentPage - 1) * PAGE_SIZE;
 
   const where: Prisma.RepairOrderWhereInput = {};
   if (status) where.status = status;
@@ -68,24 +76,35 @@ export default async function RepairsPage({
     ];
   }
 
-  const orderBy: Prisma.RepairOrderOrderByWithRelationInput = { [sort]: dir };
-  const [repairs, deviceOptions] = await Promise.all([
+  const orderBy: Prisma.RepairOrderOrderByWithRelationInput[] =
+    sort === 'status'
+      ? [{ status: 'asc' }, { createdAt: dir }]
+      : [{ status: 'asc' }, { [sort]: dir }];
+  const [repairs, totalRepairs, deviceOptions] = await Promise.all([
     prisma.repairOrder.findMany({
       where,
       orderBy,
+      skip,
+      take: PAGE_SIZE,
     }),
+    prisma.repairOrder.count({ where }),
     prisma.repairOrder.findMany({
       distinct: ['deviceName'],
       orderBy: { deviceName: 'asc' },
       select: { deviceName: true },
     }),
   ]);
+  const totalPages = Math.max(Math.ceil(totalRepairs / PAGE_SIZE), 1);
+  if (currentPage > totalPages && totalRepairs > 0) {
+    redirect(createRepairPageHref(totalPages, { q, device, status, sort, dir }));
+  }
 
   return (
     <main className="min-h-screen bg-neutral-50 px-3 py-3 sm:px-4 sm:py-8 lg:pl-76">
       <DashboardSidebar session={session} active="repairs" />
 
       <div className="mx-auto max-w-6xl">
+        <BackButton />
         <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-8">
           <header className="border-b border-neutral-200 pb-4">
             <h2 className="text-2xl font-semibold text-neutral-900">
@@ -280,8 +299,118 @@ export default async function RepairsPage({
               )}
             </div>
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalRepairs}
+            query={{ q, device, status, sort, dir }}
+          />
         </section>
       </div>
     </main>
   );
+}
+
+function Pagination({
+  currentPage,
+  totalPages,
+  totalItems,
+  query,
+}: {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  query: {
+    q: string;
+    device: string;
+    status: string;
+    sort: string;
+    dir: string;
+  };
+}) {
+  if (totalItems === 0) return null;
+
+  const pages = buildPageList(currentPage, totalPages);
+
+  return (
+    <nav className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+      <p className="text-xs text-neutral-500">
+        Ընդհանուր՝ {totalItems} պատվեր · Էջ {currentPage} / {totalPages}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <PageLink page={Math.max(currentPage - 1, 1)} query={query} disabled={currentPage === 1}>
+          Նախորդ
+        </PageLink>
+        {pages.map((page) => (
+          <PageLink key={page} page={page} query={query} active={page === currentPage}>
+            {page}
+          </PageLink>
+        ))}
+        <PageLink page={Math.min(currentPage + 1, totalPages)} query={query} disabled={currentPage === totalPages}>
+          Հաջորդ
+        </PageLink>
+      </div>
+    </nav>
+  );
+}
+
+function PageLink({
+  page,
+  query,
+  active,
+  disabled,
+  children,
+}: {
+  page: number;
+  query: {
+    q: string;
+    device: string;
+    status: string;
+    sort: string;
+    dir: string;
+  };
+  active?: boolean;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  const className = `rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+    active
+      ? 'border-green bg-green text-white'
+      : 'border-neutral-200 bg-white text-neutral-700 hover:border-green/30 hover:bg-green/5 hover:text-green'
+  } ${disabled ? 'pointer-events-none opacity-50' : ''}`;
+
+  return (
+    <a href={createRepairPageHref(page, query)} className={className} aria-current={active ? 'page' : undefined}>
+      {children}
+    </a>
+  );
+}
+
+function createRepairPageHref(
+  page: number,
+  query: {
+    q: string;
+    device: string;
+    status: string;
+    sort: string;
+    dir: string;
+  },
+) {
+  const params = new URLSearchParams();
+  if (query.q) params.set('q', query.q);
+  if (query.device) params.set('device', query.device);
+  if (query.status) params.set('status', query.status);
+  if (query.sort && query.sort !== 'createdAt') params.set('sort', query.sort);
+  if (query.dir && query.dir !== 'desc') params.set('dir', query.dir);
+  if (page > 1) params.set('page', String(page));
+
+  const qs = params.toString();
+  return qs ? `${routes.dashboardRepairs}?${qs}` : routes.dashboardRepairs;
+}
+
+function buildPageList(currentPage: number, totalPages: number) {
+  const from = Math.max(1, currentPage - 2);
+  const to = Math.min(totalPages, currentPage + 2);
+  return Array.from({ length: to - from + 1 }, (_, index) => from + index);
 }
