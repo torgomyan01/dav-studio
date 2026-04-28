@@ -9,7 +9,15 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { routes } from '@/utils/consts';
 
-export default async function DashboardPage() {
+type DashboardSearchParams = {
+  date?: string;
+};
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<DashboardSearchParams>;
+}) {
   const session = await getServerSession(authOptions);
   if (!session) {
     redirect(routes.home);
@@ -20,10 +28,17 @@ export default async function DashboardPage() {
   const repairsCount = await prisma.repairOrder.count();
   const debtsCount = await prisma.debt.count();
   const now = new Date();
-  const todayStart = startOfDay(now);
-  const yesterdayStart = new Date(todayStart);
-  yesterdayStart.setDate(todayStart.getDate() - 1);
-  const weekStart = startOfWeek(now);
+  const realTodayStart = startOfDay(now);
+  const sp = await searchParams;
+  const selectedDayStart = parseDateInput(sp.date) ?? realTodayStart;
+  const selectedDayEnd = new Date(selectedDayStart);
+  selectedDayEnd.setDate(selectedDayStart.getDate() + 1);
+  const yesterdayStart = new Date(selectedDayStart);
+  yesterdayStart.setDate(selectedDayStart.getDate() - 1);
+  const selectedDateValue = toDateInputValue(selectedDayStart);
+  const selectedDayLabel = selectedDayStart.toLocaleDateString('hy-AM');
+  const isSelectedToday = isSameDay(selectedDayStart, realTodayStart);
+  const weekStart = startOfWeek(selectedDayStart);
 
   const [
     todayAccessorySales,
@@ -38,7 +53,7 @@ export default async function DashboardPage() {
     todayCashExpenses,
   ] = await Promise.all([
     prisma.accessorySale.findMany({
-      where: { createdAt: { gte: todayStart } },
+      where: { createdAt: { gte: selectedDayStart, lt: selectedDayEnd } },
       select: {
         createdAt: true,
         quantity: true,
@@ -53,7 +68,7 @@ export default async function DashboardPage() {
       },
     }),
     prisma.accessorySale.findMany({
-      where: { createdAt: { gte: yesterdayStart, lt: todayStart } },
+      where: { createdAt: { gte: yesterdayStart, lt: selectedDayStart } },
       select: {
         quantity: true,
         totalSalePrice: true,
@@ -65,7 +80,7 @@ export default async function DashboardPage() {
       },
     }),
     prisma.repairOrder.findMany({
-      where: repairIncomeWhere(todayStart),
+      where: repairIncomeWhere(selectedDayStart, selectedDayEnd),
       select: {
         createdAt: true,
         completedAt: true,
@@ -79,7 +94,7 @@ export default async function DashboardPage() {
       },
     }),
     prisma.repairOrder.findMany({
-      where: repairIncomeWhere(yesterdayStart, todayStart),
+      where: repairIncomeWhere(yesterdayStart, selectedDayStart),
       select: { createdAt: true, completedAt: true, expenses: true, netProfit: true },
     }),
     prisma.accessorySale.findMany({
@@ -113,11 +128,11 @@ export default async function DashboardPage() {
       select: { remainingAmount: true },
     }),
     prisma.debtPayment.findMany({
-      where: { paidAt: { gte: todayStart } },
+      where: { paidAt: { gte: selectedDayStart, lt: selectedDayEnd } },
       select: { amount: true },
     }),
     prisma.dailyExpense.findMany({
-      where: { spentAt: { gte: todayStart } },
+      where: { spentAt: { gte: selectedDayStart, lt: selectedDayEnd } },
       select: { amount: true },
     }),
   ]);
@@ -148,7 +163,7 @@ export default async function DashboardPage() {
   const todayCashExpenseCount = todayCashExpenses.length;
   const todayFinalResult = todayBusinessNetProfit - todayCashExpenseTotal;
   const expenseRatio = todayBusinessNetProfit > 0 ? (todayCashExpenseTotal / todayBusinessNetProfit) * 100 : 0;
-  const isSlowDay = now.getHours() >= 14 && todayBusinessNetProfit < dailyGoal * 0.35;
+  const isSlowDay = isSelectedToday && now.getHours() >= 14 && todayBusinessNetProfit < dailyGoal * 0.35;
   const dayTip = getDayTip(strongSection.key, lowStockAccessories.length, overdueDebts.length, isSlowDay);
   const expenseMotivation = getExpenseMotivation(todayCashExpenseCount, expenseRatio, todayFinalResult);
   const todayAccessoryShare = todayIncome > 0 ? (todayAccessoryIncome / todayIncome) * 100 : 0;
@@ -182,11 +197,38 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-6xl">
         <BackButton />
         <section className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-8">
-          <header className="mb-6 border-b border-neutral-200 pb-4">
-            <h2 className="text-2xl font-semibold text-neutral-900">Վահանակ</h2>
-            <p className="mt-1 text-sm text-neutral-600">
-              Աջ հատվածում հիմնական աշխատանքային կոնտենտն է։
-            </p>
+          <header className="mb-6 grid gap-4 border-b border-neutral-200 pb-4 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div>
+              <h2 className="text-2xl font-semibold text-neutral-900">Վահանակ</h2>
+              <p className="mt-1 text-sm text-neutral-600">
+                Ցուցադրվում է {selectedDayLabel} օրվա արդյունքը։
+              </p>
+            </div>
+            <form action={routes.dashboard} className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-neutral-600">Ընտրել օրը</span>
+                <input
+                  type="date"
+                  name="date"
+                  defaultValue={selectedDateValue}
+                  className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none ring-green transition focus:border-green focus:ring-2"
+                />
+              </label>
+              <button
+                type="submit"
+                className="self-end rounded-lg bg-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green/90"
+              >
+                Ցույց տալ
+              </button>
+              {!isSelectedToday ? (
+                <Link
+                  href={routes.dashboard}
+                  className="self-end rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100"
+                >
+                  Այսօր
+                </Link>
+              ) : null}
+            </form>
           </header>
 
           <section className="mb-6 rounded-2xl border border-green/20 bg-linear-to-br from-green/10 via-white to-neutral-50 p-5">
@@ -668,6 +710,22 @@ export default async function DashboardPage() {
 
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function parseDateInput(value?: string) {
+  if (!value) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  if (!Number.isFinite(date.getTime())) return null;
+  return date;
+}
+
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function startOfWeek(d: Date) {
